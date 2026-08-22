@@ -8,12 +8,16 @@ import EMF.boolean_logic as bl
 import EMF.applications as app
 import EMF.equivmargolusfuscation as emf
 import SPN.instances as spn_i
+import hamiltonian_paths.maker as hp_maker
+import hamiltonian_paths.display as hp_display
+import minizinc_run.run as mz_run
 
 intents = discord.Intents.default()
 
 bot = commands.Bot(command_prefix = '!', intents = intents)
 
 sat_challenges = {}
+hp_challenges = {}
 
 random.seed(1)
 
@@ -146,7 +150,7 @@ async def view_sat_challenge(interaction: discord.Interaction):
 
     s = sat_challenges[interaction.user.id]
 
-    await interaction.followup.send(f'Your SAT formula is in the file below. Use the command "answer_sat_challenge" when you found the assignment!',
+    await interaction.followup.send(f'Your SAT formula is in the file below. Use the command "answer_sat_challenge" when you\'ve found the assignment!',
                                     file = to_str_file(s, filename = 'sat-challenge-formula.txt'))
 
 @bot.tree.command(name = 'hash', description = 'Hash your text using a hash function derived from a SPN cipher.')
@@ -164,6 +168,77 @@ async def numberfy(interaction: discord.Interaction, text: str):
     await interaction.response.defer()
 
     await interaction.followup.send(str(spn_i.str_to_int(text)))
+
+@bot.tree.command(name = 'make_hp_challenge', description = 'Give yourself a new Hamiltonian path challenge!')
+async def make_hp_challenge(interaction: discord.Interaction, n_nodes: int, p_extra: float):
+    await interaction.response.defer()
+
+    path, graph = hp_maker.rand_hp_graph(n_nodes, p_extra)
+
+    file_name = hp_display.graph_image(graph)
+
+    hp_challenges[interaction.user.id] = (path, graph, file_name)
+
+    await interaction.followup.send('Your challenge graph is in the file below. Use the command "answer_hp_challenge" when you\'ve found the path!',
+                                    file = discord.File(file_name))
+
+@bot.tree.command(name = 'answer_hp_challenge', description = 'Answer your HP challenge! The command "make_hp_challenge" must be done first.')
+async def answer_hp_challenge(interaction: discord.Interaction, path: str):
+    await interaction.response.defer()
+
+    if interaction.user.id not in hp_challenges:
+        await interaction.followup.send(f'You do not have a HP challenge. Use the command "make_hp_challenge" to create one.')
+
+        return
+
+    path = path.split(' ')
+
+    path = [int(s) for s in path]
+
+    answer_path, graph, _ = hp_challenges[interaction.user.id]
+
+    if hp_maker.is_hamiltonian_path(graph, answer_path[0], answer_path[-1], path):
+        file_name = 'hamiltonian_paths/images/' + hp_display.graph_path_image(graph, answer_path, 'green', 'blue')
+
+        await interaction.followup.send(f'Congrats, that was one of the Hamiltonian paths! :tada: Attached below is the solution that generated the graph. You have completed your HP challenge.',
+                                        file = discord.File(file_name))
+
+        hp_challenges.pop(interaction.user.id)
+
+        return
+
+    await interaction.followup.send(f'That was not a Hamiltonian path. :x: To view your HP challenge again, use the "view_hp_challenge" command.')
+
+@bot.tree.command(name = 'view_hp_challenge', description = 'View your HP challenge if you have any.')
+async def view_hp_challenge(interaction: discord.Interaction):
+    await interaction.response.defer()
+
+    if interaction.user.id not in hp_challenges:
+        await interaction.followup.send(f'You do not have a HP challenge. Use the command "make_hp_challenge" to create one.')
+    
+        return
+
+    _, _, file_name = hp_challenges[interaction.user.id]
+
+    await interaction.followup.send('Your challenge graph is in the file below. Use the command "answer_hp_challenge" when you\'ve found the path!',
+                                    file = discord.File('hamiltonian_paths/images/' + file_name))
+
+@bot.tree.command(name = 'run_minizinc', description = 'run_minizinc')
+@discord.app_commmands.check.has_role(1540612166984400947)
+async def run_minizinc(interaction: discord.Interaction, file: discord.Attachment, solver: str):
+    await interaction.response.defer()
+
+    data = await file.read()
+
+    file_name = f'minizinc_run/files/{random.randrange(0, 10 ** 5)}.mzn'
+
+    with open(file_name, 'wb') as file:
+        file.write(data)
+
+    sol = mz_run.solve(file_name, solver)
+
+    await interaction.followup.send('Here are the results.',
+                                    file = to_str_file(sol, 'minizinc_solutions.txt'))
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 
