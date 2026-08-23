@@ -1,5 +1,5 @@
-import graphs
-import permutations
+import hamiltonian_paths.graphs as graphs
+import hamiltonian_paths.permutations as permutations
 
 def get_full_path(n: int) -> list[int]:
     result = list(range(n))
