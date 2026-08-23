@@ -175,11 +175,11 @@ async def make_hp_challenge(interaction: discord.Interaction, n_nodes: int, p_ex
 
     path, graph = hp_maker.rand_hp_graph(n_nodes, p_extra)
 
-    file_name = hp_display.graph_image(graph)
+    file_name = hp_display.graph_image(graph, 'hamiltonian_paths/images/')
 
     hp_challenges[interaction.user.id] = (path, graph, file_name)
 
-    await interaction.followup.send('Your challenge graph is in the file below. Use the command "answer_hp_challenge" when you\'ve found the path!',
+    await interaction.followup.send(f'Your challenge graph is in the file below. The start node is {path[0]} and the end node is {path[-1]}. Use the command "answer_hp_challenge" when you\'ve found the Hamiltonian path!',
                                     file = discord.File(file_name))
 
 @bot.tree.command(name = 'answer_hp_challenge', description = 'Answer your HP challenge! The command "make_hp_challenge" must be done first.')
@@ -198,9 +198,9 @@ async def answer_hp_challenge(interaction: discord.Interaction, path: str):
     answer_path, graph, _ = hp_challenges[interaction.user.id]
 
     if hp_maker.is_hamiltonian_path(graph, answer_path[0], answer_path[-1], path):
-        file_name = 'hamiltonian_paths/images/' + hp_display.graph_path_image(graph, answer_path, 'green', 'blue')
+        file_name = hp_display.graph_path_image(graph, answer_path, 'green', 'lightblue', 'hamiltonian_paths/images/')
 
-        await interaction.followup.send(f'Congrats, that was one of the Hamiltonian paths! :tada: Attached below is the solution that generated the graph. You have completed your HP challenge.',
+        await interaction.followup.send(f'Congrats, that was one of the Hamiltonian paths! :tada: Attached below is the solution which the graph was generated from. That solution could be different from your solution. You have completed your HP challenge.',
                                         file = discord.File(file_name))
 
         hp_challenges.pop(interaction.user.id)
@@ -218,13 +218,13 @@ async def view_hp_challenge(interaction: discord.Interaction):
     
         return
 
-    _, _, file_name = hp_challenges[interaction.user.id]
+    path, _, file_name = hp_challenges[interaction.user.id]
 
-    await interaction.followup.send('Your challenge graph is in the file below. Use the command "answer_hp_challenge" when you\'ve found the path!',
-                                    file = discord.File('hamiltonian_paths/images/' + file_name))
+    await interaction.followup.send(f'Your challenge graph is in the file below. The start node is {path[0]} and the end node is {path[-1]}. Use the command "answer_hp_challenge" when you\'ve found the Hamiltonian path!',
+                                    file = discord.File(file_name))
 
 @bot.tree.command(name = 'run_minizinc', description = 'run_minizinc')
-@discord.app_commmands.check.has_role(1540612166984400947)
+@discord.app_commands.checks.has_role(1540612166984400947)
 async def run_minizinc(interaction: discord.Interaction, file: discord.Attachment, solver: str):
     await interaction.response.defer()
 
@@ -235,7 +235,7 @@ async def run_minizinc(interaction: discord.Interaction, file: discord.Attachmen
     with open(file_name, 'wb') as file:
         file.write(data)
 
-    sol = mz_run.solve(file_name, solver)
+    sol = await mz_run.solve(file_name, solver)
 
     await interaction.followup.send('Here are the results.',
                                     file = to_str_file(sol, 'minizinc_solutions.txt'))
