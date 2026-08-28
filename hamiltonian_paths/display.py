@@ -34,6 +34,8 @@ def graph_image(g: list[set[int]], folder: str) -> str:
     node_coloring = {node: 'lightblue' for node in range(len(g))}
 
     netgraph.Graph(g_edges,
+                   node_layout = 'spring',
+                   edge_layout = 'curved',
                    node_color = node_coloring,
                    arrows = True,
                    node_labels = True,
@@ -69,6 +71,8 @@ def graph_path_image(g: list[set[int]],
                    for node in range(len(g))}
 
     netgraph.Graph(g_edges,
+                   node_layout = 'spring',
+                   edge_layout = 'curved',
                    node_color = node_coloring,
                    edge_color = edge_coloring,
                    arrows = True,
