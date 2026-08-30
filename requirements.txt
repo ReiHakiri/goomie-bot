@@ -3,4 +3,4 @@ sympy
 netgraph
 minizinc
 matplotlib
-PIL
+Pillow
